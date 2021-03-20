@@ -1,6 +1,6 @@
 = Лабораторна робота №7
 
-== Колекції: ArrayList. Порівняння об’єктів
+== Колекції: ArrayList. Порівняння об’єктів. Застосування JSON для серіалізації
 
 *Тема*: Розробка та реалізація програм із використанням колекцій виду ArrayList для
 зберігання даних та файлового введення-виведення.
@@ -9,7 +9,193 @@
 використовують ArrayList для зберігання та опрацювання даних та реалізують
 операції введення-виведення із файлами.
 
-== Використання JSON для серіалізації
+=== ArrayList
+Список представляє впорядковану послідовність значень, де якесь значення може зустрічатися більше одного разу.
+
+ArrayList - одна з реалізацій списку, побудована поверх масиву, яка здатна динамічно зростати та зменшуватися під час додавання / видалення елементів. Елементи могли бути легко доступні за їх індексами, починаючи з нуля. Ця реалізація має такі властивості:
+
+. Довільний доступ займає час O(1)
+. Додавання елемента займає постійний час O(1)
+. Вставка / видалення займає час O(n)
+. Пошук займає O(n) часу для невідсортованого масиву та O(log n) для відсортованого
+
+==== Створення ArrayList
+ArrayList має кілька конструкторів, і ми їх розглянемо далі.
+
+По-перше, зауважимо, що ArrayList є загальним класом, тому ви можете його параметризувати будь-яким типом, що вам заманеться, і компілятор забезпечить, наприклад, що ви не зможете додавати значення Integer всередину колекції рядків. Крім того, вам не потрібно перетворювати елементи, отримуючи їх із колекції.
+
+По-друге, корисно використовувати загальний інтерфейс List як тип змінної, оскільки він відокремлює його від конкретної реалізації.
+
+*Default No-Arg Constructor*
+
+[source,java]
+----
+List<String> list = new ArrayList<>();
+assertTrue(list.isEmpty());
+----
+
+Просте створення порожнього екземпляру ArrayList
+
+*Constructor, що приймає Initial Capacity*
+
+[source,java]
+----
+List<String> list = new ArrayList<>(100);
+----
+
+Тут ви вказуєте початкову довжину базового масиву. Це може допомогти вам уникнути зайвої зміни розміру під час додавання нових елементів.
+
+*Constructor, що приймає Collection*
+
+[source,java]
+----
+Collection<Integer> numbers = Set.of(1,2,3,4,5);
+
+List<Integer> list = new ArrayList<>(numbers);
+assertEquals(5, list.size());
+assertTrue(numbers.containsAll(list));
+----
+
+Зверніть увагу, що кожен елемент екземпляра Collection використовується для заповнення базового масиву.
+
+==== Додавання елементів у ArrayList
+
+Ви можете вставити елемент або в кінці, або в певному положенні:
+
+[source,java]
+----
+List<Long> list = new ArrayList<>();
+
+list.add(1L);
+list.add(2L);
+list.add(1, 3L);
+
+assertThat(List.of(1L, 3L, 2L), equalTo(list));
+----
+
+Ви також можете вставити колекцію або кілька елементів одночасно:
+
+[source,java]
+----
+List<Long> list = new ArrayList<>();
+list.add(1L);
+list.add(2L);
+
+list.addAll(List.of(7L, 8L, 111L));
+
+assertThat(ArraysAsList(1L, 2L, 7L, 8L, 111L), equalTo(list));
+----
+
+==== Проход (итерация) по ArrayList
+
+Доступні два типи ітераторів: Iterator та ListIterator.
+
+У той час як перший дає вам можливість пройти по списку в одному напрямку, другий дозволяє вам пройти його в обидві сторони.
+
+Тут ми розглянемо лише ListIterator:
+
+[source,java]
+----
+List<Integer> list = new ArrayList<>(List.of(0,1,2,3,4,5,6,7,8,9));
+
+ListIterator<Integer> it = list.listIterator(list.size());
+List<Integer> result = new ArrayList<>(list.size());
+while (it.hasPrevious()) {
+    result.add(it.previous());
+}
+
+Collections.reverse(list);
+assertThat(result, equalTo(list));
+----
+
+Ви також можете шукати, додавати або видаляти елементи за допомогою ітераторів.
+
+==== Пошук в ArrayList
+
+Ми продемонструємо, як працює пошук за допомогою колекції:
+[source,java]
+----
+List<String> list = new ArrayList<>();
+for (int i=0; i<16; i++) {
+    list.add(Integer.toHexString(i));
+}
+List<String> stringsToSearch = new ArrayList<>(list);
+stringsToSearch.addAll(list); // додаємо рядки ще раз
+----
+
+*Пошук в неупорядкованому списку*
+
+Для того, щоб знайти елемент, ви можете використовувати методи indexOf() або lastIndexOf(). Вони обидва приймають об'єкт і повертають значення int:
+
+[source,java]
+----
+assertEquals(10, stringsToSearch.indexOf("a"));
+assertEquals(26, stringsToSearch.lastIndexOf("a"));
+----
+
+Також можна використовувати цикл for або ітератор:
+
+[source,java]
+----
+Iterator<String> it = stringsToSearch.iterator();
+Set<String> matchingStrings = new HashSet<>(Arrays.asList("a", "c", "9"));
+
+List<String> result = new ArrayList<>();
+while (it.hasNext()) {
+    String s = it.next();
+    if (matchingStrings.contains(s)) {
+        result.add(s);
+    }
+}
+----
+
+*Пошук у впорядкованому списку*
+
+Якщо у вас відсортований масив, ви можете використовувати двійковий алгоритм пошуку, який працює швидше, ніж лінійний пошук:
+
+[source,java]
+----
+List<String> copy = new ArrayList<>(stringsToSearch);
+Collections.sort(copy);
+int index = Collections.binarySearch(copy, "f");
+assert(index>0);
+----
+
+Як результат ми отримаємо індекс елемента, який ми шукали, якщо він міститься у списку; інакше, (- (точка вставки) - 1). Точка вставки визначається як точка, в яку елемент буде вставлений у список: індекс першого елемента, більший за шуканий, або list.size (), якщо всі елементи у списку менше зазначеного елемента. Зверніть увагу, що це гарантує, що повернене значення буде >= 0 тоді і тільки тоді, коли значення знайдено.
+
+*Видалення елементів з ArrayList*
+
+Для того, щоб видалити елемент, слід знайти його індекс і лише потім виконати видалення методом remove(). Перевантажена версія цього методу, яка приймає об'єкт, шукає його та виконує видалення першого входження рівного елемента:
+
+[source,java]
+----
+List<Integer> list = new ArrayList<>(List.of(0,1,2,3,4,5,6,7,8,9));
+Collections.reverse(list);
+
+list.remove(0);
+assertThat(list.get(0), equalTo(8));
+
+list.remove(Integer.valueOf(0));
+assertFalse(list.contains(0));
+----
+
+Але будьте обережні, працюючи з такими Wrapper класами, як Integer. Для того, щоб вилучити певний елемент, спочатку слід явно упаковати int у Integer або, інакше, елемент буде видалений за його індексом.
+
+Ви також можете використовувати Stream API (розглядатиметься у наступних роботах) для видалення кількох елементів, але ми не будемо розглядати його тут. Для цього ми використаємо ітератор:
+
+[source,java]
+----
+Set<String> matchingStrings = HashSet<>(Arrays.asList("a", "b", "c", "d", "e", "f"));
+
+Iterator<String> it = stringsToSearch.iterator();
+while (it.hasNext()) {
+    if (matchingStrings.contains(it.next())) {
+        it.remove();
+    }
+}
+----
+
+=== Використання JSON для серіалізації
 У лабораторній роботі основна увага приділяється на розумінні використання класу ObjectMapper з бібліотеки Jackson та способі серіалізації об'єктів Java у JSON та десеріалізації рядка JSON у об'єкти Java.
 
 Щоб зрозуміти більше про бібліотеку Jackson загалом, https://www.baeldung.com/jackson[Jackson Tutorial] - це гарне місце для початку.
